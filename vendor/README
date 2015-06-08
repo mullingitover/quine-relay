@@ -1,0 +1,47 @@
+Unlambda: unlambda.rb
+  * self-made
+  * License: MIT
+
+Whitespace: whitespace.rb
+  * self-made
+  * License: MIT
+
+Subleq: subleq.rb
+  * self-made
+  * License: MIT
+
+Thue: thue.rb
+  * self-made
+  * License: MIT
+
+Ook!: ook-to-bf.rb
+  * self-made
+  * License: MIT
+
+BLC8: blc.rb
+  * self-made
+  * License: MIT
+
+FALSE: false.rb
+  * self-made
+  * License: MIT
+
+ante: ante.rb
+  * https://github.com/michaeldv
+  * License: MIT
+
+Befunge: cfunge-0.9.0.tar.bz2
+  * http://sourceforge.net/projects/cfunge/
+  * License: GPL3
+
+LOLCODE: lci-0.10.5.zip
+  * http://lolcode.org/
+  * License: GPL3+
+
+Piet: npiet-1.3d.tar.gz
+  * http://www.bertnase.de/npiet/
+  * License: GPL2
+
+Lazy K: lazyk.c
+  * https://github.com/irori/lazyk
+  * License: GPL2+

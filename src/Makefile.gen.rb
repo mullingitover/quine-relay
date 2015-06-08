@@ -2,8 +2,8 @@ require_relative "code-gen"
 
 OUT = []
 
-def banner(s1, s2=nil)
-  s = "##  #{ s1 }#{ ' -> ' + s2 if s2 }  ##"
+def banner(s1, s2=nil, i=nil)
+  s = "##  #{ "#{ i + 1 }: " if i }#{ s1 }#{ ' -> ' + s2 if s2 }  ##"
   OUT << "\t@echo"
   OUT << "\t@echo \"#{ "#" * s.size }\""
   OUT << "\t@echo \"#{ s }\""
@@ -14,41 +14,45 @@ end
 OUT << <<-END
 MAKEFLAGS += --no-print-directory
 
-BRAINFUCK=beef
-CLOJURE=clojure
-NODEJS=nodejs
-JASMIN=jasmin
+PATH := $(CURDIR)/vendor/local/bin:$(PATH)
+CLASSPATH := .
 
-ifeq ($(shell [ -f /etc/arch-release ] && echo arch),arch)
-  BRAINFUCK=brainfuck
-  CLOJURE=clj
-  NODEJS=node
-  JASMIN=java -jar jasmin.jar
+find_any0 = $(firstword $(foreach x,$(1),$(if $(shell which $(x) 2>/dev/null),$(x),)))
+check = $(if $(2),$(2),$(error $(1) interpreter not found!))
+find_any = $(call check,$(1),$(call find_any0,$(2)))
+
+JAVASCRIPT := $(call find_any,JavaScript,rhino nodejs node js)
+SCHEME     := $(call find_any,Scheme,guile csi gosh)
+BF         := $(call find_any,Brainfuck,bf beef)
+GBS        := $(call find_any,Gambas script,gbs3 gbs2)
+
+ifeq ($(SCHEME),csi)
+  SCHEME := csi -s
 endif
+
+.DELETE_ON_ERROR:
 END
 OUT << "all: QR2.rb"
 banner("CHECK")
 OUT << "\tdiff QR.rb QR2.rb"
 
-langs = CodeGen::List.reverse.flat_map {|c| c.steps.map {|step| step.name } } + ["Ruby"]
-cmds = CodeGen::List.reverse.flat_map {|c| c.steps.map {|step| step.cmd } }
-srcs = CodeGen::List.reverse.flat_map {|c| c.steps.map {|step| step.src } } + ["QR2.rb"]
-
-cmds.each {|cmd|
-  cmd.gsub!(/^(beef|clojure|nodejs|jasmin)/,
-    'beef' => '$(BRAINFUCK)',
-    'clojure' => '$(CLOJURE)',
-    'nodejs' => '$(NODEJS)',
-    'jasmin' => '$(JASMIN)')
-}
-
-cmds.size.times do |i|
-  cmd = cmds[i].gsub("OUTFILE", srcs[i + 1])
+[*RunSteps, RunStep["Ruby", "QR2.rb"]].each_cons(2).with_index do |(s1, s2), i|
+  cmd = s1.cmd_make.gsub("OUTFILE", s2.src)
 
   OUT << ""
-  OUT << "#{ srcs[i + 1] }: #{ srcs[i] }"
-  banner(langs[i], langs[i + 1])
+  OUT << "#{ s2.src }: #{ s1.src }"
+  banner(s1.name, s2.name, i)
+  OUT << "\t@mv #{ s1.backup } #{ s1.backup }.bak" if s1.backup
   cmd.split("&&").each {|c| OUT << "\t" + c.strip }
+  OUT << "\t@mv #{ s1.backup }.bak #{ s1.backup }" if s1.backup
 end
 
-File.write("../Makefile", OUT.join("\n") + "\n")
+OUT << <<-END
+
+clean:
+\t@mv QR.rb quine-relay.rb
+\trm -f qr QR qr.* QR.* QR2.rb *.class gst.im
+\t@mv quine-relay.rb QR.rb
+END
+
+File.write("../Makefile", OUT.join("\n"))

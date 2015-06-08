@@ -1,28 +1,33 @@
 # usage:
-#   ruby test.rb      # test all CodeGens
-#   ruby test.rb Perl # test only Perl CodeGen
+#   ruby test.rb      # test all Steps
+#   ruby test.rb Perl # test only Perl Step
 
 require_relative "code-gen"
 
-CodeGen.setup_dir("tmp")
+ENV["PATH"] = "vendor/local/bin:#{ ENV["PATH"] }"
 
-gens = ARGV[0] ? [eval(ARGV[0])] : CodeGen::List[0..-2]
+dir = File.join(File.dirname(__dir__), "tmp")
+Dir.mkdir(dir) unless File.directory?(dir)
+Dir.chdir(dir)
+File.symlink("../vendor", "vendor") unless File.symlink?("vendor")
+
+gens = ARGV[0] ? [eval(ARGV[0])] : GenSteps[0..-2]
 text = ARGV[1] || "Hello"
 
 all_check = true
 
-gens.each do |gen|
-  puts "test: %p" % gen
+gens.each do |gen_step|
+  puts "test: %s" % gen_step.name
 
-  code = Class.new.class_eval(CodeGen::PROLOGUE + gen.gen_code("#{ text.dump }")) + "\n"
+  code = Object.new.instance_eval(GenPrologue + gen_step.code.sub("PREV") { text.dump }) + "\n"
+  code.sub!("%%", "%") if gen_step.name == "Octave_Ook"
 
-  steps = gen.steps + [CodeGen::Step[nil, "QR.txt", nil, nil]]
+  steps = [*gen_step.run_steps, RunStep[nil, "QR.txt"]]
 
   File.write(steps.first.src, code)
 
   steps.each_cons(2) do |src, dst|
-    cmd = src.cmd.gsub("OUTFILE", dst.src)
-    cmd = cmd.gsub(/mv QR\.c(\.bak)? QR\.c(\.bak)? &&/, "")
+    cmd = src.cmd_raw.gsub("OUTFILE", dst.src)
     puts "cmd: " + cmd
     system(cmd) || raise("failed")
   end
